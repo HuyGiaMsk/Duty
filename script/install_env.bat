@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 
 :set_main_paths
 set DEFAULT_INSTALL_PATH=%USERPROFILE%\AppData\Local\Programs\Python
-set SOURCE_PATH=%USERPROFILE%\automation_tool
+set SOURCE_PATH=%USERPROFILE%\Duty
 set VENV_PATH=%SOURCE_PATH%\venv
 
 :install_python
@@ -45,17 +45,17 @@ set VENV_PATH=%SOURCE_PATH%\venv
         (
             echo B^=print
             echo import os as A^,zipfile as G^,requests as H
-            echo E^='automation_tool'
+            echo E^='Duty'
             echo I^=A.path.join^(A.path.expanduser^('~'^)^,E^)
             echo def C^(^):
             echo 	if A.path.exists^(I^):B^('Already containing the source code'^)^;return
-            echo 	J^=f^"https://github.com/HuyGiaMsk/automation-tool/archive/main.zip^"^;B^('Start download source'^)^;F^=H.get^(J^)
+            echo 	J^=f^"https://github.com/HuyGiaMsk/Duty/archive/main.zip^"^;B^('Start download source'^)^;F^=H.get^(J^,verify^=False^)
             echo 	if F.status_code^=^=200:
-            echo 		C^=A.path.expanduser^('~'^)^;D^=A.path.join^(C^,'automated_task.zip'^)
+            echo 		C^=A.path.expanduser^('~'^)^;D^=A.path.join^(C^,'Duty.zip'^)
             echo 		with open^(D^,'wb'^)as K:K.write^(F.content^)
             echo 		B^('Download source successfully'^)
             echo 		with G.ZipFile^(D^,'r'^)as L:L.extractall^(C^)
-            echo 		A.rename^(A.path.join^(C^,'automation-tool-main'^)^,A.path.join^(C^,E^)^)^;A.remove^(D^)^;B^(f^"Extracted source code and placed it in ^{C^}^"^)
+            echo 		A.rename^(A.path.join^(C^,'Duty-main'^)^,A.path.join^(C^,E^)^)^;A.remove^(D^)^;B^(f^"Extracted source code and placed it in ^{C^}^"^)
             echo 	else:B^('Failed to download the source'^)
             echo if __name__^=^='__main__':C^(^)
         ) > temporary_download_source.py
