@@ -219,7 +219,7 @@ class Duty(AutomatedTask):
             else:
                 ws[f'B{index}'] = new_status_miss
 
-            new_file_path = os.path.join(rename_folder, 'input.xlsx')
+            new_file_path = os.path.join(rename_folder, 'output.xlsx')
 
             if os.path.exists(new_file_path):
                 os.remove(new_file_path)
