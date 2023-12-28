@@ -1,11 +1,14 @@
 import datetime
 import os
+import shutil
 import time
+import requests
 from datetime import datetime
 from enum import Enum
 from logging import Logger
 from typing import Dict, Tuple
 
+import requests
 from openpyxl import load_workbook
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -94,6 +97,7 @@ class Duty(AutomatedTask):
                 fcr_code = key
                 fcr_index = value[0]
                 self.click_download(fcr_code, fcr_index)
+
                 self._rename_file_after_download(fcr_code, fcr_index)
 
             batch_index += 1
@@ -113,11 +117,12 @@ class Duty(AutomatedTask):
         while True:
             try:
                 if attempt_counter >= max_attempt:
-                    raise Exception('Can not click download for frc {}'.format(fcr_code))
+                    raise Exception('Can not click download for fcr {}'.format(fcr_code))
 
                 logger.info(f'Try to click on {fcr_code} at index {fcr_index}')
                 self._click_when_element_present(by=By.CSS_SELECTOR,
                                                  value=f'table#EDIGrid.MyGrid tr:nth-child({fcr_index}) a')
+
                 break
             except Exception:
                 time.sleep(1)
@@ -188,15 +193,34 @@ class Duty(AutomatedTask):
             logger.info('The document for {} has been downloaded !'.format(fcr_code))
             break
 
-        # rename
         all_files_in_download_folder: list[str] = os.listdir(download_folder)
         download_filename: str = None if len(all_files_in_download_folder) == 0 else all_files_in_download_folder[0]
 
-        rename_filename_path = os.path.join(rename_folder, '{}_Duty.pdf'.format(fcr_code))
         full_file_path: str = os.path.join(download_folder, download_filename)
+        rename_filename_path = os.path.join(rename_folder, '{}_Duty.pdf'.format(fcr_code))
 
-        os.rename(full_file_path, rename_filename_path)
-        logger.info('Renamed from {} to {}'.format(full_file_path, rename_filename_path))
+        if os.path.exists(rename_filename_path):
+            os.remove(rename_filename_path)
+
+        max_attempt: int = 2*60
+        while True:
+            if attempt_counter > max_attempt:
+                logger.error('The tool waiting too long to download document for {}. Please check !'.format(fcr_code))
+                break
+
+            shutil.copy(full_file_path, rename_filename_path)
+            time.sleep(1)
+
+            if os.path.exists(rename_filename_path) and os.path.getsize(rename_filename_path) > 0:
+                logger.info('Renamed from {} to {}'.format(full_file_path, rename_filename_path))
+                os.remove(full_file_path)
+                break
+            else:
+                logger.info('File {} emty, try to moving'.format(rename_filename_path))
+                time.sleep(1)
+                shutil.copy(full_file_path, rename_filename_path)
+                attempt_counter +=1
+                continue
 
     def _input_excel(self):
         logger: Logger = get_current_logger()
@@ -226,35 +250,35 @@ class Duty(AutomatedTask):
             wb.save(new_file_path)
 
     # _______________________________________________________________________________________________________________
-    # def _rename_by_asp(self, postfix_url:str):
-    #
-    #     cookie_asp_session = self._driver.get_cookie('ASP.NET_SessionId')
-    #     if cookie_asp_session:
-    #         asp_session_value = cookie_asp_session.get('value')
-    #
-    #         if asp_session_value:
-    #             pdf_url = postfix_url
-    #             cookies = self._driver.get_cookies()
-    #
-    #             session = requests.Session()
-    #
-    #             cookies_string = ';'.join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
-    #             headers = {'Cookie': f"NET_SessionId={asp_session_value}",
-    #                        'Host' : 'amerapps.apmoller.net'}
-    #
-    #             session.auth = None
-    #             response = session.get(pdf_url, headers=headers, verify=False, auth=None)
-    #
-    #             if response.status_code == 200:
-    #                 # Lưu phản hồi từ yêu cầu requests dưới dạng tệp PDF
-    #                 download_path = '/path/to/save/downloaded_file.pdf'  # Thay thế bằng đường dẫn lưu tệp PDF
-    #                 with open(download_path, 'wb') as file:
-    #                     file.write(response.content)
-    #                 print(f"Download successful. File saved at: {download_path}")
-    #             else:
-    #                 print("Download failed.")
-    #         else:
-    #             print("ASPSession cookie value not found.")
-    #     else:
-    #         print("ASPSession cookie not found.")
+    def _rename_by_asp(self, postfix_url:str):
+
+        cookie_asp_session = self._driver.get_cookie('ASP.NET_SessionId')
+        if cookie_asp_session:
+            asp_session_value = cookie_asp_session.get('value')
+
+            if asp_session_value:
+                pdf_url = postfix_url
+                cookies = self._driver.get_cookies()
+
+                session = requests.Session()
+
+                cookies_string = ';'.join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
+                headers = {'Cookie': f"NET_SessionId={asp_session_value}",
+                           'Host' : 'amerapps.apmoller.net'}
+
+                session.auth = None
+                response = session.get(pdf_url, headers=headers, verify=False, auth=None)
+
+                if response.status_code == 200:
+                    # Lưu phản hồi từ yêu cầu requests dưới dạng tệp PDF
+                    download_path = '/path/to/save/downloaded_file.pdf'  # Thay thế bằng đường dẫn lưu tệp PDF
+                    with open(download_path, 'wb') as file:
+                        file.write(response.content)
+                    print(f"Download successful. File saved at: {download_path}")
+                else:
+                    print("Download failed.")
+            else:
+                print("ASPSession cookie value not found.")
+        else:
+            print("ASPSession cookie not found.")
     # ________________________________________________________________________________________________________________
