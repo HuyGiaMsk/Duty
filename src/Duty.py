@@ -12,7 +12,7 @@ import requests
 from openpyxl import load_workbook
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
-
+from selenium.webdriver.common.keys import Keys
 from src.AutomatedTask import AutomatedTask
 from src.FileUtil import get_excel_data_in_column_start_at_row
 from src.ThreadLocalLogger import get_current_logger
@@ -43,7 +43,8 @@ class Duty(AutomatedTask):
 
         uid: str = self._settings['username']
         psw: str = self._settings['password']
-        login_url = 'https://{}:{}@amerapps.apmoller.net/DutyDeduction/Grid.aspx?search=true'.format((uid), (psw))
+        login_url = ('https://{}:{}@amerapps-legacy.apmoller.net/DutyDeduction/Grid.aspx?search=true'
+                     .format((uid) , (psw)))
         logger.info('Try to login')
         self._driver.get(login_url)
         logger.info("Login successfully")
@@ -60,12 +61,21 @@ class Duty(AutomatedTask):
         batch_index: int = 0
         quantity_of_batches: int = len(download_filter_cookies)
         while batch_index < quantity_of_batches:
-            self._driver.add_cookie(
-                {'name': 'Download1FilterString', 'value': f'{download_filter_cookies[batch_index]}'})
-            self._driver.add_cookie(
-                {'name': 'SearchControl1Download1Filter', 'value': f'{search_filter_cookies[batch_index]}'})
-            self._driver.get(login_url)
-            logger.info('Refreshed cookies')
+
+            try_count = 1
+            try:
+                if try_count > 20:
+                    raise Exception
+                self._driver.add_cookie(
+                    {'name': 'Download1FilterString', 'value': f'{download_filter_cookies[batch_index]}'})
+                self._driver.add_cookie(
+                    {'name': 'SearchControl1Download1Filter', 'value': f'{search_filter_cookies[batch_index]}'})
+                self._driver.get(login_url)
+                logger.info('Refreshed cookies')
+                time.sleep(1)
+
+            except:
+                logger.info('cannot add cookies')
 
             fcr_code_to_index_and_time: Dict[str, Tuple[int, datetime]] = {}
 
@@ -202,14 +212,18 @@ class Duty(AutomatedTask):
         if os.path.exists(rename_filename_path):
             os.remove(rename_filename_path)
 
-        max_attempt: int = 2*60
+        max_attempt: int = 2 * 60
         while True:
             if attempt_counter > max_attempt:
                 logger.error('The tool waiting too long to download document for {}. Please check !'.format(fcr_code))
                 break
 
-            shutil.copy(full_file_path, rename_filename_path)
-            time.sleep(1)
+            if os.path.getsize(full_file_path) > 0:
+                shutil.copy(full_file_path, rename_filename_path)
+                time.sleep(1)
+            else:
+                os.remove(full_file_path)
+                logger.info('Removed file {}'.format(full_file_path))
 
             if os.path.exists(rename_filename_path) and os.path.getsize(rename_filename_path) > 0:
                 logger.info('Renamed from {} to {}'.format(full_file_path, rename_filename_path))
@@ -219,7 +233,7 @@ class Duty(AutomatedTask):
                 logger.info('File {} emty, try to moving'.format(rename_filename_path))
                 time.sleep(1)
                 shutil.copy(full_file_path, rename_filename_path)
-                attempt_counter +=1
+                attempt_counter += 1
                 continue
 
     def _input_excel(self):
@@ -250,7 +264,7 @@ class Duty(AutomatedTask):
             wb.save(new_file_path)
 
     # _______________________________________________________________________________________________________________
-    def _rename_by_asp(self, postfix_url:str):
+    def _rename_by_asp(self, postfix_url: str):
 
         cookie_asp_session = self._driver.get_cookie('ASP.NET_SessionId')
         if cookie_asp_session:
@@ -264,7 +278,7 @@ class Duty(AutomatedTask):
 
                 cookies_string = ';'.join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
                 headers = {'Cookie': f"NET_SessionId={asp_session_value}",
-                           'Host' : 'amerapps.apmoller.net'}
+                           'Host': 'amerapps.apmoller.net'}
 
                 session.auth = None
                 response = session.get(pdf_url, headers=headers, verify=False, auth=None)

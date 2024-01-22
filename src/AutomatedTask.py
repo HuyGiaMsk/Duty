@@ -1,13 +1,11 @@
 import logging
 import os
-import shutil
 import time
 import uuid
 from abc import abstractmethod
 from logging import Logger
 from typing import Callable
 
-from openpyxl.reader.excel import load_workbook
 from selenium import webdriver
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
