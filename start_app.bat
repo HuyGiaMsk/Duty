@@ -3,7 +3,7 @@
 setlocal enabledelayedexpansion
 
 :set_main_paths
-set SOURCE_PATH=%USERPROFILE%\automation_tool
+set SOURCE_PATH=%USERPROFILE%\Duty
 set SCRIPT_PATH=%SOURCE_PATH%\script
 set VENV_PATH=%SOURCE_PATH%\venv
 
